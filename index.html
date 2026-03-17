@@ -16,14 +16,16 @@
       --border: rgba(255,255,255,.14);
     }
 
-    /* ✅ خط DIN Next LT Arabic Bold */
+    /* ✅ DIN Next LT Arabic Bold
+       الأفضل: حمّل الخط داخل مشروعك على المسار التالي:
+       ./fonts/DINNextLTArabic-Bold.ttf
+       (وحطيت خيار ثاني من رابط الملف كاحتياط)
+    */
     @font-face{
       font-family: "DINNextLTArabic";
-      /* الخيار 1: من الرابط (قد لا يعمل في بعض الاستضافات بسبب CORS) */
-      src: url("https://www.genspark.ai/api/files/s/BgkJxu4h") format("truetype");
-      /* الخيار 2 (الأفضل): استضافة محلية داخل مشروعك:
-         src: url("fonts/DINNextLTArabic-Bold.ttf") format("truetype");
-      */
+      src:
+        url("./fonts/DINNextLTArabic-Bold.ttf") format("truetype"),
+        url("https://www.genspark.ai/api/files/s/BgkJxu4h") format("truetype");
       font-weight: 700;
       font-style: normal;
       font-display: swap;
@@ -101,7 +103,6 @@
       line-height:1.7;
       margin-top:8px;
     }
-    code{ background:rgba(0,0,0,.22); padding:2px 6px; border-radius:6px; }
   </style>
 </head>
 
@@ -117,9 +118,7 @@
         <button id="downloadBtn">حفظ PNG</button>
       </div>
 
-      <div class="hint">
-        بطاقة معايدة
-      </div>
+      <div class="hint">بطاقة معايدة</div>
     </div>
 
     <div class="card">
@@ -128,21 +127,36 @@
   </div>
 
 <script>
-  // صورتك داخل GitHub / المشروع
-  const IMAGE_SRC = "images/im1.png"; // غيّر الامتداد إذا لازم
+  /**********************
+   * إعدادات سهلة التعديل
+   **********************/
 
-  // ✅ خط الاسم (DIN) + حجم الخط
-  const NAME_FONT = "700 32px DINNextLTArabic, Tajawal, Cairo, 'Noto Kufi Arabic', sans-serif";
+  // ✅ مسار الصورة (تأكد أنها موجودة فعلاً داخل مجلد images)
+  const IMAGE_SRC = "./images/im1.png";
 
-  // ✅ لون الكتابة (الاسم) حسب طلبك
+  // ✅ كبّر/صغّر الاسم من هنا
+  const NAME_FONT_SIZE = 42; // كان 32 — كبرناه
+  const NAME_FONT = `700 ${NAME_FONT_SIZE}px DINNextLTArabic, Tajawal, Cairo, 'Noto Kufi Arabic', sans-serif`;
+
+  // ✅ لون الاسم حسب طلبك
   const NAME_TEXT_COLOR = "#3A845D";
 
-  // ننزل الاسم شوي داخل اللوحة
-  const NAME_Y_OFFSET = 18;
+  // ✅ رفع/تنزيل الاسم:
+  // ملاحظة: الرقم السالب يرفع لفوق، والموجب ينزّل لتحت
+  const NAME_Y_OFFSET = -10; // جرّب -6 أو -12 حسب رغبتك
+
+  // يمين/يسار (إذا احتجت تحريك بسيط)
+  const NAME_X_OFFSET = 12;
 
   // مكان اللوحة (حسب مقاس 709x1000)
   const PLATE = { x: 95, y: 820, w: 519, h: 96 };
 
+  // مهلة انتظار تحميل الخط (حتى لا يعلق عرض الصورة)
+  const FONT_LOAD_TIMEOUT_MS = 800;
+
+  /**********************
+   * كود الرسم
+   **********************/
   const canvas = document.getElementById("c");
   const ctx = canvas.getContext("2d");
 
@@ -159,7 +173,7 @@
   }
 
   function drawName(name){
-    const safe = String(name||"").trim().slice(0, 28);
+    const safe = String(name || "").trim().slice(0, 28);
     if(!safe) return;
 
     ctx.save();
@@ -167,7 +181,7 @@
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
-    // ظل خفيف لتحسين القراءة
+    // ظل خفيف
     ctx.shadowColor = "rgba(0,0,0,0.25)";
     ctx.shadowBlur = 4;
     ctx.shadowOffsetY = 2;
@@ -175,7 +189,6 @@
     ctx.fillStyle = NAME_TEXT_COLOR;
     ctx.font = NAME_FONT;
 
-    const NAME_X_OFFSET = 12; // يمين شوي
     const x = PLATE.x + PLATE.w/2 + NAME_X_OFFSET;
     const y = PLATE.y + PLATE.h/2 + NAME_Y_OFFSET;
 
@@ -184,17 +197,30 @@
   }
 
   async function render(){
-    // تأكد الصورة تحمّلت
-    if(!img.complete){
-      await new Promise((res, rej)=>{ img.onload=res; img.onerror=rej; });
+    // 1) انتظر تحميل الصورة
+    if (!img.complete) {
+      await new Promise((res, rej) => {
+        img.onload = res;
+        img.onerror = rej;
+      });
     }
 
-    // ✅ مهم جدًا: تأكد الخط تحمّل قبل الرسم على canvas
-    if (document.fonts && document.fonts.load) {
-      await document.fonts.load(NAME_FONT);
-      await document.fonts.ready;
+    // 2) ارسم الصورة فورًا (حتى لو الخط ما تحمّل)
+    drawBase();
+
+    // 3) حاول تحميل الخط بدون ما يعلّق
+    try{
+      if (document.fonts && document.fonts.load) {
+        await Promise.race([
+          document.fonts.load(`700 ${NAME_FONT_SIZE}px DINNextLTArabic`),
+          new Promise(res => setTimeout(res, FONT_LOAD_TIMEOUT_MS))
+        ]);
+      }
+    }catch(e){
+      // تجاهل أخطاء الخط
     }
 
+    // 4) ارسم من جديد + الاسم
     drawBase();
     drawName(nameInput.value);
   }
@@ -209,9 +235,18 @@
   renderBtn.addEventListener("click", ()=>render().catch(()=>{}));
   downloadBtn.addEventListener("click", downloadPNG);
 
+  // Enter يعرض الاسم
+  nameInput.addEventListener("keydown", (e)=>{
+    if(e.key === "Enter") render().catch(()=>{});
+  });
+
   img.onload = ()=>render();
-  img.onerror = ()=>{
-    alert("تعذر تحميل الصورة من المسار: " + IMAGE_SRC + " — تأكد من الاسم/الامتداد داخل مجلد images.");
+  img.onerror = (e)=>{
+    console.error("Image failed to load:", IMAGE_SRC, e);
+    alert(
+      "تعذر تحميل الصورة من المسار:\n" + IMAGE_SRC +
+      "\n\nتأكد من:\n1) وجود مجلد images\n2) وجود ملف im1.png بداخله\n3) الاسم/الامتداد صحيح"
+    );
   };
 </script>
 </body>
