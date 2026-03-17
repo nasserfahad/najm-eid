@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>بطاقة رمضان - إضافة اسم</title>
 
-  <!-- خطوط قريبة من خط المثال (Sans/Kufi حديث) -->
+  <!-- خطوط احتياط (Fallback) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700&family=Cairo:wght@600;700&family=Noto+Kufi+Arabic:wght@500;700&display=swap" rel="stylesheet">
@@ -14,6 +14,19 @@
     :root{
       --panel: rgba(255,255,255,.08);
       --border: rgba(255,255,255,.14);
+    }
+
+    /* ✅ خط DIN Next LT Arabic Bold */
+    @font-face{
+      font-family: "DINNextLTArabic";
+      /* الخيار 1: من الرابط (قد لا يعمل في بعض الاستضافات بسبب CORS) */
+      src: url("https://www.genspark.ai/api/files/s/BgkJxu4h") format("truetype");
+      /* الخيار 2 (الأفضل): استضافة محلية داخل مشروعك:
+         src: url("fonts/DINNextLTArabic-Bold.ttf") format("truetype");
+      */
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
     }
 
     body{
@@ -25,7 +38,7 @@
       padding:22px;
       background:#062b30;
       color:#fff;
-      font-family: "Tajawal", system-ui, -apple-system, "Segoe UI", Tahoma, Arial, sans-serif;
+      font-family: "DINNextLTArabic", "Tajawal", system-ui, -apple-system, "Segoe UI", Tahoma, Arial, sans-serif;
     }
 
     .wrap{ width:min(980px, 100%); display:grid; gap:14px; }
@@ -105,7 +118,7 @@
       </div>
 
       <div class="hint">
-       بطاقة معايدة
+        بطاقة معايدة
       </div>
     </div>
 
@@ -118,19 +131,16 @@
   // صورتك داخل GitHub / المشروع
   const IMAGE_SRC = "images/im1.png"; // غيّر الامتداد إذا لازم
 
-  // ---- تعديلك هنا (أصغر + نازل شوي) ----
-  // كان 46px -> صار 38px (أصغر)
-  const NAME_FONT = "700 32px Tajawal, Cairo, 'Noto Kufi Arabic', sans-serif";
+  // ✅ خط الاسم (DIN) + حجم الخط
+  const NAME_FONT = "700 32px DINNextLTArabic, Tajawal, Cairo, 'Noto Kufi Arabic', sans-serif";
 
-  // لون النص قريب من المثال: أوف وايت مائل للأخضر [Source](https://www.genspark.ai/api/files/s/Eayugj40)
-  const NAME_TEXT_COLOR = "#EEF2ED";
+  // ✅ لون الكتابة (الاسم) حسب طلبك
+  const NAME_TEXT_COLOR = "#3A845D";
 
-  // ننزل الاسم شوي داخل اللوحة (زيادة عن الوسط)
-  const NAME_Y_OFFSET = 18; // زوّدها 5/10/15 حسب رغبتك
-  // --------------------------------------
+  // ننزل الاسم شوي داخل اللوحة
+  const NAME_Y_OFFSET = 18;
 
-  // مكان اللوحة (حسب مقاس 709x1000 مثل صور المثال) [Source](https://www.genspark.ai/api/files/s/Eayugj40)
-  // إذا صورتك نفس التصميم والمقاس، هذه غالبًا تضبط. لو اختلف المقاس قلّي وأضبطها لك.
+  // مكان اللوحة (حسب مقاس 709x1000)
   const PLATE = { x: 95, y: 820, w: 519, h: 96 };
 
   const canvas = document.getElementById("c");
@@ -157,7 +167,7 @@
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
-    // ظل خفيف مثل اللي يبان في المثال [Source](https://www.genspark.ai/api/files/s/Eayugj40)
+    // ظل خفيف لتحسين القراءة
     ctx.shadowColor = "rgba(0,0,0,0.25)";
     ctx.shadowBlur = 4;
     ctx.shadowOffsetY = 2;
@@ -165,18 +175,26 @@
     ctx.fillStyle = NAME_TEXT_COLOR;
     ctx.font = NAME_FONT;
 
-     const NAME_X_OFFSET = 12; // يمين شوي
-     const x = PLATE.x + PLATE.w/2 + NAME_X_OFFSET;
-     const y = PLATE.y + PLATE.h/2 + NAME_Y_OFFSET; // هنا النزول
-    ctx.fillText(safe, x, y);
+    const NAME_X_OFFSET = 12; // يمين شوي
+    const x = PLATE.x + PLATE.w/2 + NAME_X_OFFSET;
+    const y = PLATE.y + PLATE.h/2 + NAME_Y_OFFSET;
 
+    ctx.fillText(safe, x, y);
     ctx.restore();
   }
 
   async function render(){
+    // تأكد الصورة تحمّلت
     if(!img.complete){
       await new Promise((res, rej)=>{ img.onload=res; img.onerror=rej; });
     }
+
+    // ✅ مهم جدًا: تأكد الخط تحمّل قبل الرسم على canvas
+    if (document.fonts && document.fonts.load) {
+      await document.fonts.load(NAME_FONT);
+      await document.fonts.ready;
+    }
+
     drawBase();
     drawName(nameInput.value);
   }
